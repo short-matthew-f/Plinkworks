@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0b0c12" />
+  <meta name="description" content="Plinkworks: a physics sandbox that makes music." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>Plinkworks</title>
+</head>
+<body>
+  <header id="transport" aria-label="Transport">
+    <button id="play" class="icon-btn primary" aria-label="Play">▶</button>
+    <button id="reset" class="icon-btn" aria-label="Reset">⟲</button>
+    <label class="field bpm"><span>BPM</span>
+      <span class="stepper"><button data-bpm="-1" aria-label="Slower">−</button><input id="bpm" type="number" min="40" max="200" inputmode="numeric" /><button data-bpm="1" aria-label="Faster">+</button></span>
+    </label>
+    <label class="field"><span>Key</span><select id="key"></select></label>
+    <label class="field scale"><span>Scale</span><select id="scale"></select></label>
+    <label class="field quant"><span>Quantize <b id="quantize-val"></b></span><input id="quantize" type="range" min="0" max="100" step="5" /></label>
+    <span class="spacer"></span>
+    <button id="share" class="icon-btn" aria-label="Share">⤴</button>
+    <button id="menu" class="icon-btn" aria-label="Menu">☰</button>
+  </header>
+  <main id="stage">
+    <canvas id="table" aria-label="Machine table"></canvas>
+    <div id="banner" hidden></div>
+    <button id="start" hidden><span>▶</span><small>Tap to start the machine</small></button>
+  </main>
+  <section id="drawer" aria-label="Parts">
+    <div id="drawer-handle"><span class="grip"></span><span>Parts</span></div>
+    <div id="drawer-parts"></div>
+    <p class="drawer-hint">Drag a part onto the table. Drag to move, twist with two fingers to rotate, long-press for settings. Tap the floor to pin a drum hit.</p>
+  </section>
+  <div id="sheet-backdrop" hidden></div>
+  <section id="sheet" hidden aria-modal="true" role="dialog"></section>
+  <div id="toast" hidden></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
