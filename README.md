@@ -44,8 +44,9 @@ beat gate. Links: bumper, beat gate and drain → spawner and beat gate.
 - **Clock.** Musical time comes from the audio context via a small `Clock` rather than
   `Tone.Transport`; it plays the same role (single source of musical time, lookahead scheduling) and
   keeps BPM changes and pause/resume exact.
-- **Drum floor tuning.** A cell needs repeated traffic to fire (one pass charges ~0.1–0.25, fire
-  threshold 0.3), otherwise a busy table fires every cell every 16th.
+- **Drum floor tuning.** Firing spends a cell's charge, so a cell keeps hitting only while balls keep
+  feeding it; a **Drum density** control (menu) sets how much charge a cell needs. The starter
+  machine plays about 13 hits a bar at the default (9 sparse, 27 busy).
 - **Beat gate.** "Open beats" are the four beats of the bar; a link trigger opens it for one beat.
 - **Transposer (+1 degree)** carries into the next octave (a smaller ball) when it wraps past the top degree.
 - **Saves:** unlimited named slots in a list (open question on slots/gallery).

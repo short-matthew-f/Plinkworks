@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DrumFloor } from '../src/sim/floor';
+import { DrumFloor, fireThreshold } from '../src/sim/floor';
 import { TABLE_H, TABLE_W } from '../src/model/machine';
 
 describe('drum floor', () => {
@@ -14,8 +14,8 @@ describe('drum floor', () => {
     expect(f.fireColumn(3)).toEqual([]); // one pass is not a beat
     f.chargeCell(3, 7);
     expect(f.fireColumn(3)).toEqual([{ row: 0, col: 3, velocity: expect.closeTo(0.5) }]);
-    f.chargeCell(3, 7);
-    f.chargeCell(3, 7);
+    expect(f.charge[3]).toBeCloseTo(0); // firing spends the charge
+    for (let i = 0; i < 4; i++) f.chargeCell(3, 7);
     expect(f.charge[3]).toBe(1);
     f.decay(8, 4); // half the fade
     expect(f.charge[3]).toBeCloseTo(0.5);
@@ -28,5 +28,16 @@ describe('drum floor', () => {
     expect(f.fireColumn(5)).toEqual([{ row: 1, col: 5, velocity: 1 }]);
     f.togglePin(16 + 5);
     expect(f.fireColumn(5)).toEqual([]);
+  });
+});
+
+describe('drum density', () => {
+  it('busier settings fire on less charge', () => {
+    expect(fireThreshold(1)).toBeLessThan(fireThreshold(0.5));
+    expect(fireThreshold(0)).toBeGreaterThan(fireThreshold(0.5));
+    const f = new DrumFloor();
+    f.chargeCell(2, 7);
+    expect(f.fireColumn(2, fireThreshold(0))).toEqual([]);
+    expect(f.fireColumn(2, fireThreshold(1))).toHaveLength(1);
   });
 });

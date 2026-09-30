@@ -7,7 +7,7 @@ import {
   type Machine, type Part, type Spawner, type Voice, type Gate,
 } from '../model/machine';
 import { BALL_RADIUS, bandStep, ballStep, degreeHue, scaleSize, mod, type BallSize } from '../model/music';
-import { DrumFloor } from './floor';
+import { DrumFloor, fireThreshold } from './floor';
 import { Rng } from './rng';
 
 export const PHYS_HZ = 120;
@@ -365,7 +365,7 @@ export class Sim {
     this.floor.decay(this.beatsPerStep(), m.fadeBars);
     while (this.step16 / 4 <= this.beat) {
       const col = mod(this.step16, FLOOR_COLS);
-      for (const h of this.floor.fireColumn(col)) this.emit({ kind: 'drum', step16: this.step16, ...h });
+      for (const h of this.floor.fireColumn(col, fireThreshold(m.drumDensity))) this.emit({ kind: 'drum', step16: this.step16, ...h });
       this.step16++;
     }
 

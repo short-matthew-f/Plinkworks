@@ -198,6 +198,7 @@ export function openMenu(app: App): void {
     row('Reverb', ...range(0, 100, 5, Math.round(m.reverb * 100), (v) => `${v}%`, (v) => { m.reverb = v / 100; app.engine.applySettings(m); app.changed(); })),
     row('Volume', ...range(0, 100, 5, Math.round(m.volume * 100), (v) => `${v}%`, (v) => { m.volume = v / 100; app.engine.applySettings(m); app.changed(); })),
     row('Table tilt', ...range(0, 30, 1, m.tilt, (v) => (v === 0 ? 'Flat' : `${v}°`), (v) => { app.sim.setTilt(v); app.changed(); })),
+    row('Drum density', ...range(0, 100, 5, Math.round(m.drumDensity * 100), (v) => (v <= 20 ? 'Sparse' : v >= 80 ? 'Busy' : `${v}%`), (v) => { m.drumDensity = v / 100; app.changed(); })),
     row('Drum fade', ...range(1, 16, 1, m.fadeBars, (v) => `${v} bar${v === 1 ? '' : 's'}`, (v) => { m.fadeBars = v; app.changed(); })),
     row('Floor grid', seg([[true, 'Show'], [false, 'Hide']], app.showGrid, (v) => { app.showGrid = v; })),
   );

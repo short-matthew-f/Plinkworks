@@ -50,6 +50,7 @@ export interface Machine {
   volume: number; // 0..1
   tilt: number; // degrees, 0 = billiards
   fadeBars: number;
+  drumDensity: number; // 0 (sparse) .. 1 (busy)
   parts: Part[];
   pins: number[]; // pinned floor cell indices (row * FLOOR_COLS + col)
 }
@@ -148,6 +149,7 @@ export function defaultMachine(): Machine {
     volume: 0.8,
     tilt: 12,
     fadeBars: 4,
+    drumDensity: 0.5,
     parts,
     pins: [0, 8], // kick on beats 1 and 3
   };
@@ -217,6 +219,7 @@ export function normalizeMachine(raw: unknown): Machine {
     volume: clamp(r.volume, 0, 1, d.volume),
     tilt: clamp(r.tilt, 0, 30, d.tilt),
     fadeBars: clamp(r.fadeBars, 1, 16, 4),
+    drumDensity: clamp(r.drumDensity, 0, 1, 0.5),
     parts,
     pins: Array.isArray(r.pins)
       ? [...new Set((r.pins as unknown[]).filter((c): c is number => Number.isInteger(c) && (c as number) >= 0 && (c as number) < FLOOR_COLS * FLOOR_ROWS))]

@@ -2,8 +2,15 @@
 import { FLOOR_COLS, FLOOR_ROWS, TABLE_H, TABLE_W } from '../model/machine';
 
 export const CELL_COUNT = FLOOR_COLS * FLOOR_ROWS;
-/** Cells below this charge are silent: a single slow pass is not enough, steady traffic is. */
-export const MIN_FIRE_CHARGE = 0.3;
+/**
+ * Charge a cell needs to fire, from the machine's drum density (0 = sparse, 1 = busy).
+ * At the default (0.5) a single pass is not enough; steady traffic is.
+ */
+export function fireThreshold(density: number): number {
+  return 0.2 + 0.6 * (1 - Math.max(0, Math.min(1, density)));
+}
+/** Firing spends charge, so a cell keeps hitting only while balls keep feeding it. */
+export const FIRE_COST = 0.5;
 
 export interface DrumHit { row: number; col: number; velocity: number }
 
@@ -49,12 +56,15 @@ export class DrumFloor {
   clearCharge(): void { this.charge.fill(0); }
 
   /** Hits for one playhead column: pinned cells at full velocity, charged cells at their charge. */
-  fireColumn(col: number): DrumHit[] {
+  fireColumn(col: number, threshold = fireThreshold(0.5)): DrumHit[] {
     const hits: DrumHit[] = [];
     for (let row = 0; row < FLOOR_ROWS; row++) {
       const i = row * FLOOR_COLS + col;
       if (this.pinned[i]) hits.push({ row, col, velocity: 1 });
-      else if (this.charge[i] >= MIN_FIRE_CHARGE) hits.push({ row, col, velocity: this.charge[i] });
+      else if (this.charge[i] >= threshold) {
+        hits.push({ row, col, velocity: this.charge[i] });
+        this.charge[i] = Math.max(0, this.charge[i] - FIRE_COST);
+      }
     }
     return hits;
   }

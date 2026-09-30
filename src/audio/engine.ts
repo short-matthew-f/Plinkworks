@@ -137,7 +137,7 @@ export class AudioEngine {
     };
     const closedHat = hat(0.05);
     const openHat = hat(0.4);
-    const clap = new Tone.NoiseSynth({ noise: { type: 'pink' }, volume: -11, envelope: { attack: 0.001, decay: 0.09, sustain: 0 } });
+    const clap = new Tone.NoiseSynth({ noise: { type: 'pink' }, volume: -14, envelope: { attack: 0.001, decay: 0.09, sustain: 0 } });
     clap.chain(new Tone.Filter({ type: 'bandpass', frequency: 1300, Q: 0.9 }), out);
     const tom = (note: string) => ({
       s: new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 2.2, volume: -8, envelope: { attack: 0.001, decay: 0.38, sustain: 0, release: 0.1 } }).connect(out),
