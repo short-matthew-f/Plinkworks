@@ -5,6 +5,7 @@ import {
   type Machine, type Part, type PartType,
 } from '../model/machine';
 import { BALL_RADIUS, bandStep, degreeHue, mod, scaleSize } from '../model/music';
+import { CHORDS_PER_SECTION, type ChordSpan } from '../model/harmony';
 import { PART_RADIUS, TRANSPOSER_DEPTH, GATE_THICKNESS, type Sim } from '../sim/sim';
 
 export type Flash =
@@ -40,6 +41,8 @@ export interface RenderState {
   linkFrom: string | null;
   showGrid: boolean;
   ghost: Part | null;
+  /** The chord sounding now (conductor on), for the progression display. */
+  chord: ChordSpan | null;
 }
 
 function hsl(h: number, s: number, l: number, a = 1): string {
@@ -94,6 +97,7 @@ export class Renderer {
     ctx.fillRect(tx, ty, tw, th);
 
     this.drawFloor(s, now);
+    if (s.chord) this.drawChord(s.chord, s.audioBeat);
 
     ctx.strokeStyle = '#2a2f3d';
     ctx.lineWidth = 2;
@@ -159,6 +163,46 @@ export class Renderer {
       ctx.arc(v.sx(f.x), v.sy(f.y), (0.25 + t * 0.9) * v.scale, 0, Math.PI * 2);
       ctx.stroke();
     }
+  }
+
+  /** Current chord, where the phrase is heading, and progress through the phrase. */
+  private drawChord(c: ChordSpan, beat: number): void {
+    const { ctx, view: v } = this;
+    const x = v.sx(0) + 12;
+    const y = v.sy(TABLE_H) + 10;
+    ctx.save();
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(235,238,250,0.85)';
+    ctx.font = '600 17px system-ui, sans-serif';
+    ctx.fillText(c.name, x + 16, y);
+    const w = ctx.measureText(c.name).width;
+    ctx.fillStyle = 'rgba(160,170,200,0.7)';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText(c.cadence ? 'arrived' : `→ ${c.goalName}`, x + 16 + w + 8, y + 4);
+    // Phrase progress: one dot per chord, the current one filling as it plays.
+    const slot = c.index % CHORDS_PER_SECTION;
+    const frac = Math.max(0, Math.min(1, (beat - c.startBeat) / (c.endBeat - c.startBeat)));
+    for (let i = 0; i < CHORDS_PER_SECTION; i++) {
+      const cx = x + 22 + i * 12;
+      const cy = y + 28;
+      ctx.fillStyle = i < slot ? 'rgba(143,179,255,0.8)' : 'rgba(143,179,255,0.18)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      if (i === slot) {
+        ctx.fillStyle = 'rgba(143,179,255,0.85)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, 3.5, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // Intensity: a small vertical meter left of the chord name.
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(x, y + 2, 4, 30);
+    ctx.fillStyle = 'rgba(255,226,138,0.7)';
+    ctx.fillRect(x, y + 2 + 30 * (1 - c.intensity), 4, 30 * c.intensity);
+    ctx.restore();
   }
 
   private pulse(now: number, match: (f: Flash) => boolean): number {
@@ -457,7 +501,7 @@ export class Renderer {
     };
     const p = { ...createPart(type, 'icon', 1.2, 1.2), ...iconParts[type] } as Part;
     const fakeSim = { balls: [], gates: new Map() } as unknown as Sim;
-    r.drawPart(p, { sim: fakeSim, machine: m, audioTime: 0, audioBeat: 0, playing: false, selected: null, linkFrom: null, showGrid: false, ghost: null }, 0, 0, false, false);
+    r.drawPart(p, { sim: fakeSim, machine: m, audioTime: 0, audioBeat: 0, playing: false, selected: null, linkFrom: null, showGrid: false, ghost: null, chord: null }, 0, 0, false, false);
   }
 }
 

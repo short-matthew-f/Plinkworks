@@ -55,14 +55,18 @@ export class App {
     if (this.playing) {
       // The simulation runs a little ahead of what is audible, so every note can be scheduled precisely.
       this.sim.advanceTo(this.engine.clock.beatAt(now + LEAD_SECONDS));
+      this.engine.updateHarmony(this.sim.conductor, this.machine, this.sim.beat);
       for (const e of this.sim.drainEvents()) this.onEvent(e);
     }
-    this.engine.updateTexture(this.sim.energy, this.sim.balls.length, dt, this.playing);
+    const audioBeat = this.engine.clock.beatAt(now);
+    const chord = this.machine.chords ? this.sim.conductor.chordAt(audioBeat, this.machine) : null;
+    this.engine.updateTexture(this.sim.energy, this.sim.balls.length, dt, this.playing, chord?.intensity ?? 0.6);
     this.renderer.draw({
       sim: this.sim,
       machine: this.machine,
       audioTime: now,
-      audioBeat: this.engine.clock.beatAt(now),
+      audioBeat,
+      chord,
       playing: this.playing,
       selected: this.selected,
       linkFrom: this.linkFrom,
@@ -73,13 +77,13 @@ export class App {
   }
 
   private onEvent(e: SimEvent): void {
-    const played = this.engine.schedule(e, this.machine);
+    const played = this.engine.schedule(e, this.machine, this.sim.conductor);
     if (!played) return;
     const time = played.time;
     switch (e.kind) {
       case 'note':
       case 'sustainStart':
-        this.renderer.flash({ kind: 'ring', time, x: e.x, y: e.y, hue: e.hue, strength: e.velocity, partId: e.partId });
+        this.renderer.flash({ kind: 'ring', time, x: e.x, y: e.y, hue: e.hue, strength: played.velocity ?? e.velocity, partId: e.partId });
         break;
       case 'drum':
         this.renderer.flash({ kind: 'cell', time, cell: e.row * FLOOR_COLS + e.col, strength: e.velocity });

@@ -7,14 +7,15 @@ import {
   type Machine, type Part, type Spawner, type Voice, type Gate,
 } from '../model/machine';
 import { BALL_RADIUS, bandStep, ballStep, degreeHue, scaleSize, mod, type BallSize } from '../model/music';
-import { DrumFloor, fireThreshold } from './floor';
+import { DrumFloor, fireThreshold, rowsForIntensity } from './floor';
+import { Conductor } from '../model/harmony';
 import { Rng } from './rng';
 
 export const PHYS_HZ = 120;
 export const DT = 1 / PHYS_HZ;
 export const BALL_CAP = 24;
 /** Impacts slower than this (table units per second) make no sound, so resting balls never buzz. */
-export const SILENCE_SPEED = 0.7;
+export const SILENCE_SPEED = 1.0;
 /** A ball cannot sound again within one grid step (a 16th). */
 export const RETRIGGER_BEATS = 0.25;
 /** Gravity at full tilt: tilt angle scales it by sin(tilt). */
@@ -70,6 +71,8 @@ export class Sim {
   world!: RAPIER.World;
   private queue!: RAPIER.EventQueue;
   floor = new DrumFloor();
+  /** Chord progression and intensity arc, shared with the audio engine. */
+  conductor!: Conductor;
   rng!: Rng;
   beat = 0;
   steps = 0;
@@ -120,6 +123,7 @@ export class Sim {
     this.energy = 0;
     this.events = [];
     this.rng = new Rng(m.seed);
+    this.conductor = new Conductor(m.seed);
     this.floor.clearCharge();
     this.floor.setPins(m.pins);
     // Walls on all four edges; they are sounding surfaces.
@@ -365,7 +369,13 @@ export class Sim {
     this.floor.decay(this.beatsPerStep(), m.fadeBars);
     while (this.step16 / 4 <= this.beat) {
       const col = mod(this.step16, FLOOR_COLS);
-      for (const h of this.floor.fireColumn(col, fireThreshold(m.drumDensity))) this.emit({ kind: 'drum', step16: this.step16, ...h });
+      if (col === 0) {
+        // Each bar's pattern is planned from the floor's charge, with the arc deciding which rows play.
+        const bar = this.step16 / FLOOR_COLS;
+        const intensity = m.chords ? this.conductor.intensityAtBar(bar, m) : 1;
+        this.floor.planBar(fireThreshold(m.drumDensity), m.drumDensity, rowsForIntensity(intensity));
+      }
+      for (const h of this.floor.fireColumn(col)) this.emit({ kind: 'drum', step16: this.step16, ...h });
       this.step16++;
     }
 
@@ -406,7 +416,7 @@ export class Sim {
       const b = o2.ball;
       const speed = this.impactSpeed(a, { x: b.vx, y: b.vy }, a.collider, b.collider);
       if (speed < SILENCE_SPEED) return;
-      const vel = impactVelocity(speed);
+      const vel = impactVelocity(speed) * 0.7; // ball-on-ball clicks sit under the melody
       const pb = b.body.translation();
       for (const [ball, p] of [[a, pos], [b, pb]] as const) {
         if (!this.canSound(ball)) continue;

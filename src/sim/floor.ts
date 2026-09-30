@@ -9,8 +9,23 @@ export const CELL_COUNT = FLOOR_COLS * FLOOR_ROWS;
 export function fireThreshold(density: number): number {
   return 0.2 + 0.6 * (1 - Math.max(0, Math.min(1, density)));
 }
-/** Firing spends charge, so a cell keeps hitting only while balls keep feeding it. */
-export const FIRE_COST = 0.5;
+/**
+ * Most hits each row may play per bar, before density scaling. Rows bottom to top:
+ * kick, snare (rim), closed hat (shaker), open hat, clap (snap), low tom, high tom, perc.
+ */
+export const ROW_CAPS = [3, 2, 6, 1, 1, 1, 1, 2];
+
+/**
+ * Which rows the arc lets in at a given intensity: a quiet section is kick and shaker,
+ * the peak is the whole kit.
+ */
+export function rowsForIntensity(intensity: number): boolean[] {
+  const on = [0, 2];
+  if (intensity >= 0.35) on.push(1, 7);
+  if (intensity >= 0.6) on.push(3, 5, 6);
+  if (intensity >= 0.8) on.push(4);
+  return Array.from({ length: FLOOR_ROWS }, (_, r) => on.includes(r));
+}
 
 export interface DrumHit { row: number; col: number; velocity: number }
 
@@ -53,18 +68,41 @@ export class DrumFloor {
     return out;
   }
 
-  clearCharge(): void { this.charge.fill(0); }
+  clearCharge(): void {
+    this.charge.fill(0);
+    this.plan.fill(0);
+  }
 
-  /** Hits for one playhead column: pinned cells at full velocity, charged cells at their charge. */
-  fireColumn(col: number, threshold = fireThreshold(0.5)): DrumHit[] {
+  /** The pattern for the current bar: velocity per cell (0 = silent). */
+  readonly plan = new Float32Array(CELL_COUNT);
+
+  /**
+   * Plan the next bar. Each row plays only its most-charged cells (up to its cap), so the beat is a loop
+   * that repeats and slowly morphs as ball traffic shifts, instead of every charged cell firing at once.
+   * Pinned cells always play.
+   */
+  planBar(threshold: number, density: number, rows: readonly boolean[]): void {
+    this.plan.fill(0);
+    const scale = 0.5 + Math.max(0, Math.min(1, density));
+    for (let row = 0; row < FLOOR_ROWS; row++) {
+      const cap = rows[row] ? Math.round(ROW_CAPS[row] * scale) : 0;
+      const cells: number[] = [];
+      for (let col = 0; col < FLOOR_COLS; col++) {
+        const i = row * FLOOR_COLS + col;
+        if (this.charge[i] >= threshold) cells.push(i);
+      }
+      cells.sort((a, b) => this.charge[b] - this.charge[a] || a - b);
+      for (const i of cells.slice(0, cap)) this.plan[i] = 0.3 + 0.5 * this.charge[i];
+    }
+    for (let i = 0; i < CELL_COUNT; i++) if (this.pinned[i]) this.plan[i] = 0.9;
+  }
+
+  /** Hits for one playhead column, from the current bar's plan. */
+  fireColumn(col: number): DrumHit[] {
     const hits: DrumHit[] = [];
     for (let row = 0; row < FLOOR_ROWS; row++) {
-      const i = row * FLOOR_COLS + col;
-      if (this.pinned[i]) hits.push({ row, col, velocity: 1 });
-      else if (this.charge[i] >= threshold) {
-        hits.push({ row, col, velocity: this.charge[i] });
-        this.charge[i] = Math.max(0, this.charge[i] - FIRE_COST);
-      }
+      const v = this.plan[row * FLOOR_COLS + col];
+      if (v > 0) hits.push({ row, col, velocity: v });
     }
     return hits;
   }

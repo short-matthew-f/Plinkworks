@@ -51,6 +51,9 @@ export interface Machine {
   tilt: number; // degrees, 0 = billiards
   fadeBars: number;
   drumDensity: number; // 0 (sparse) .. 1 (busy)
+  chords: boolean; // the conductor's chord progression and intensity arc
+  chordBars: number; // bars per chord: 1, 2 or 4
+  harmony: number; // how hard melody notes fit the chord: 0 off, 0.5 guided, 1 strict
   parts: Part[];
   pins: number[]; // pinned floor cell indices (row * FLOOR_COLS + col)
 }
@@ -102,7 +105,7 @@ export function createPart(type: PartType, id: string, x: number, y: number): Pa
   switch (type) {
     case 'spawner': return { ...b, type, angle: -Math.PI / 2, interval: 2, noteMode: 'arp', degree: 0, size: 1, voice: 'kalimba', speed: 1 };
     case 'drain': return { ...b, type, radius: 0.55, bass: true };
-    case 'bumper': return { ...b, type, step: 2, voice: 'mallets', kick: 3 };
+    case 'bumper': return { ...b, type, step: 2, voice: 'mallets', kick: 2 };
     case 'band': return { ...b, type, angle: -0.25, length: 2.4, voice: 'kalimba' };
     case 'chime': return { ...b, type, step: 4, voice: 'mallets' };
     case 'rail': return { ...b, type, angle: 0.3, length: 3, step: -3, voice: 'cello' };
@@ -119,7 +122,7 @@ export function defaultMachine(): Machine {
     parts.push(p);
     return p;
   };
-  add('spawner', 2.2, 15.2, { interval: 4, noteMode: 'arp', degree: 0, size: 1, voice: 'kalimba' } as Partial<Spawner>);
+  add('spawner', 3.0, 15.2, { interval: 4, noteMode: 'arp', degree: 0, size: 1, voice: 'kalimba' } as Partial<Spawner>);
   add('spawner', 6.8, 15.2, { interval: 6, noteMode: 'random', degree: 2, size: 0, voice: 'mallets' } as Partial<Spawner>);
   // A staggered field of chime pegs: a pentatonic ladder.
   const pegRows = [[1.6, 3.4, 5.6, 7.4], [2.5, 4.5, 6.5], [1.6, 3.4, 5.6, 7.4]];
@@ -142,14 +145,17 @@ export function defaultMachine(): Machine {
     seed: 1,
     key: 0,
     scale: 'majorPent',
-    bpm: 96,
-    swing: 0.15,
+    bpm: 84,
+    swing: 0.2,
     quantize: 1,
-    reverb: 0.3,
+    reverb: 0.45,
     volume: 0.8,
-    tilt: 12,
-    fadeBars: 4,
-    drumDensity: 0.5,
+    tilt: 10,
+    fadeBars: 6,
+    drumDensity: 0.35,
+    chords: true,
+    chordBars: 2,
+    harmony: 0.5,
     parts,
     pins: [0, 8], // kick on beats 1 and 3
   };
@@ -218,8 +224,11 @@ export function normalizeMachine(raw: unknown): Machine {
     reverb: clamp(r.reverb, 0, 1, d.reverb),
     volume: clamp(r.volume, 0, 1, d.volume),
     tilt: clamp(r.tilt, 0, 30, d.tilt),
-    fadeBars: clamp(r.fadeBars, 1, 16, 4),
-    drumDensity: clamp(r.drumDensity, 0, 1, 0.5),
+    fadeBars: clamp(r.fadeBars, 1, 16, 6),
+    drumDensity: clamp(r.drumDensity, 0, 1, 0.35),
+    chords: typeof r.chords === 'boolean' ? r.chords : true,
+    chordBars: [1, 2, 4].includes(r.chordBars as number) ? (r.chordBars as number) : 2,
+    harmony: [0, 0.5, 1].includes(r.harmony as number) ? (r.harmony as number) : 0.5,
     parts,
     pins: Array.isArray(r.pins)
       ? [...new Set((r.pins as unknown[]).filter((c): c is number => Number.isInteger(c) && (c as number) >= 0 && (c as number) < FLOOR_COLS * FLOOR_ROWS))]
